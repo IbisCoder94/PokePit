@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>PokéFlick Arena — Tactical Pokémon Flick Battler</title>
+  <meta name="theme-color" content="#0b0d17" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230284c7' stroke='%23facc15' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%23facc15'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Press+Start+2P&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%; height: 100dvh; width: 100%; margin: 0; padding: 0; overflow: hidden;
+      padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+      font-family: 'Inter', system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #10203a 0%, #070b14 70%, #04060b 100%);
+      color: #f1f5f9;
+      user-select: none; -webkit-user-select: none; touch-action: none;
+    }
+    .font-arcade { font-family: 'Press Start 2P', monospace; }
+    .font-mono-num { font-family: 'JetBrains Mono', monospace; }
+    .pixel-art { image-rendering: pixelated; image-rendering: crisp-edges; }
+    .glass-panel { background: rgba(15, 23, 42, 0.84); backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.18); }
+    .shiny-aura { filter: drop-shadow(0 0 6px #fde047) drop-shadow(0 0 12px #f59e0b); }
+
+    #rotate-overlay { display: none; }
+    @media (pointer: coarse) and (orientation: portrait), (max-width: 520px) and (orientation: portrait) {
+      #rotate-overlay { display: flex !important; }
+    }
+    @keyframes phoneRotateAnim {
+      0%, 15% { transform: rotate(0deg); }
+      45%, 75% { transform: rotate(-90deg); }
+      100% { transform: rotate(0deg); }
+    }
+    .animate-phone-rotate { animation: phoneRotateAnim 2.4s ease-in-out infinite; }
+
+    @media (max-height: 500px) {
+      header { height: 32px !important; }
+      #app-root { padding: 4px 6px !important; }
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.35); border-radius: 999px; }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+  <!-- PHONE PORTRAIT LOCK OVERLAY -->
+  <div id="rotate-overlay" class="fixed inset-0 z-[100] bg-slate-950/98 backdrop-blur-md flex-col items-center justify-center p-6 text-center gap-4">
+    <div class="w-16 h-16 rounded-2xl bg-sky-600/20 border-2 border-sky-400 flex items-center justify-center">
+      <svg viewBox="0 0 48 48" class="w-10 h-10 text-sky-300 animate-phone-rotate" fill="none" stroke="currentColor" stroke-width="2.5">
+        <rect x="14" y="6" width="20" height="36" rx="4" />
+        <circle cx="24" cy="37" r="1.5" fill="currentColor" />
+      </svg>
+    </div>
+    <h2 class="font-arcade text-xs text-sky-300">ROTATE TO LANDSCAPE</h2>
+    <p class="text-xs text-slate-300 max-w-xs">PokéFlick Arena is built for Landscape Mode on phones. Turn your phone sideways to battle!</p>
+  </div>
+
+  <!-- TOP NAV BAR -->
+  <header class="shrink-0 h-11 glass-panel border-b border-slate-800 px-3 flex items-center justify-between gap-2 z-40">
+    <div class="flex items-center gap-2 min-w-0">
+      <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 flex items-center justify-center border border-sky-200/40 shadow shrink-0">
+        <i data-lucide="disc" class="w-4 h-4 text-white"></i>
+      </div>
+      <div class="leading-tight min-w-0">
+        <div class="font-arcade text-[10px] sm:text-xs text-sky-300 truncate">POKÉFLICK ARENA</div>
+        <div class="text-[9px] text-slate-400 hidden sm:block">Tactical Physics PvP Battler</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button id="btn-flick-home" class="hidden flex items-center gap-1 bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition">
+        <i data-lucide="home" class="w-3.5 h-3.5"></i><span>Home</span>
+      </button>
+      <button id="btn-switch-slots" type="button" class="flex items-center gap-1 bg-red-950/85 hover:bg-red-900 border border-red-400/50 text-red-100 px-2.5 py-1 rounded-lg text-[11px] font-bold transition" title="Switch to PokéPit Slots">
+        <i data-lucide="repeat" class="w-3.5 h-3.5 text-amber-300"></i>
+        <span>PokéPit Slots</span>
+      </button>
+      <button id="btn-toggle-fs" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200" title="Fullscreen">
+        <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+      </button>
+      <button id="btn-toggle-mute" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200" title="Mute SFX">
+        <i id="icon-mute" data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT -->
+  <main id="app-root" class="flex-1 min-h-0 w-full max-w-7xl mx-auto px-2.5 py-2 overflow-hidden flex flex-col">
+
+    <!-- ==================== VIEW 1: SETUP / MAIN MENU ==================== -->
+    <section id="view-menu" class="h-full grid grid-cols-12 gap-2.5 overflow-hidden">
+      <!-- LEFT (7 cols): Mode, Arena, Play Type & Start -->
+      <div class="col-span-7 glass-panel rounded-2xl p-3 flex flex-col justify-between gap-2 overflow-hidden border-sky-500/30">
+        <div class="space-y-2 overflow-y-auto pr-1">
+          <div class="flex items-center justify-between gap-2">
+            <h1 class="font-arcade text-xs sm:text-base text-white">FLICK <span class="text-sky-300">BATTLE</span> SETUP</h1>
+            <span id="menu-stats-pill" class="text-[10px] font-mono-num text-amber-300 bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full">0W • 0 KOs • 0 Goals</span>
+          </div>
+
+          <!-- Game Mode Selector -->
+          <div>
+            <div class="text-[9px] font-extrabold uppercase text-slate-400 mb-1">1. Game Mode</div>
+            <div id="mode-grid" class="grid grid-cols-4 gap-1.5"></div>
+          </div>
+
+          <!-- Arena Selector -->
+          <div>
+            <div class="text-[9px] font-extrabold uppercase text-slate-400 mb-1">2. Arena &amp; Obstacles</div>
+            <div id="arena-grid" class="grid grid-cols-4 gap-1.5"></div>
+          </div>
+
+          <!-- Opponent / Play Mode -->
+          <div>
+            <div class="text-[9px] font-extrabold uppercase text-slate-400 mb-1">3. Match Type</div>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button data-playtype="ai" class="btn-playtype py-1.5 px-2 rounded-xl text-[11px] font-extrabold border transition">vs AI Rival</button>
+              <button data-playtype="local" class="btn-playtype py-1.5 px-2 rounded-xl text-[11px] font-extrabold border transition">2P Same Device</button>
+              <button data-playtype="online" class="btn-playtype py-1.5 px-2 rounded-xl text-[11px] font-extrabold border transition">Live P2P Room</button>
+            </div>
+          </div>
+
+          <!-- Live P2P Room Controls (shown when online selected) -->
+          <div id="online-room-bar" class="hidden bg-indigo-950/60 border border-indigo-400/40 rounded-xl p-2 flex items-center gap-1.5">
+            <button id="btn-create-p2p" class="px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[10px] shrink-0">Create Room</button>
+            <input id="input-join-p2p" type="text" maxlength="10" placeholder="FLK-XXXX" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white uppercase font-mono-num outline-none" />
+            <button id="btn-join-p2p" class="px-2.5 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-[10px] shrink-0">Join</button>
+          </div>
+        </div>
+
+        <!-- Primary Launch Button -->
+        <button id="btn-launch-match" class="shrink-0 w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-400 via-cyan-300 to-emerald-400 hover:brightness-110 text-slate-950 font-arcade text-xs shadow-lg transition active:scale-[0.98]">
+          START 60s PREP + MATCH!
+        </button>
+      </div>
+
+      <!-- RIGHT (5 cols): Starter Selector + PokéPit Shiny Cosmetic Toggle -->
+      <div class="col-span-5 glass-panel rounded-2xl p-3 flex flex-col gap-1.5 overflow-hidden">
+        <div class="shrink-0 flex items-center justify-between gap-1">
+          <div>
+            <div class="text-[11px] font-extrabold text-amber-300 uppercase">Pick Your Starter</div>
+            <div class="text-[9px] text-slate-400">Shinies unlocked in PokéPit usable as cosmetics!</div>
+          </div>
+          <button id="btn-toggle-shiny-cosmetic" class="hidden px-2 py-1 rounded-lg bg-yellow-400 text-slate-950 font-extrabold text-[10px] shrink-0">★ Shiny ON</button>
+        </div>
+
+        <div id="starter-gen-bar" class="shrink-0 flex gap-1 overflow-x-auto pb-0.5"></div>
+        <div id="starter-list" class="flex-1 min-h-0 grid grid-cols-3 sm:grid-cols-4 gap-1.5 overflow-y-auto content-start pr-1"></div>
+
+        <div id="selected-starter-info" class="shrink-0 bg-slate-900/90 border border-slate-700 rounded-xl p-2 flex items-center justify-between gap-2 text-[10px]"></div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: LIVE PVP LOBBY ==================== -->
+    <section id="view-lobby" class="hidden h-full flex flex-col gap-2 overflow-hidden">
+      <div class="shrink-0 glass-panel rounded-xl px-3 py-1.5 border border-indigo-400/50 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-arcade text-xs text-indigo-200">FLICK LOBBY</span>
+          <span id="lobby-code-badge" class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-mono-num font-extrabold text-xs">FLK-XXXX</span>
+          <span id="lobby-status-pill" class="text-[10px] font-bold text-amber-300">1/2 Waiting...</span>
+        </div>
+        <div class="flex gap-1.5">
+          <button id="btn-copy-room" class="px-2.5 py-1 rounded-lg bg-slate-800 text-amber-200 text-[10px] font-bold border border-slate-600">Copy</button>
+          <button id="btn-leave-lobby" class="px-2.5 py-1 rounded-lg bg-red-950 text-red-200 text-[10px] font-bold border border-red-500/40">Leave</button>
+        </div>
+      </div>
+      <div class="flex-1 min-h-0 grid grid-cols-12 gap-2.5 overflow-hidden">
+        <div class="col-span-6 glass-panel rounded-2xl p-2.5 flex flex-col justify-between gap-2 overflow-hidden">
+          <div class="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-extrabold uppercase text-sky-300">Players (1v1 or 2v2 • Max 4)</span>
+              <button id="btn-lobby-swap" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[9px] font-bold text-amber-200">Swap Team</button>
+            </div>
+            <div id="lobby-slots-list" class="grid grid-cols-2 gap-1.5"></div>
+          </div>
+          <div class="shrink-0 grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-800">
+            <button id="btn-lobby-ready" class="w-full py-2 rounded-xl bg-amber-400 text-slate-950 font-extrabold text-xs">Mark Ready</button>
+            <button id="btn-lobby-start" disabled class="w-full py-2 rounded-xl bg-emerald-500 disabled:opacity-40 text-slate-950 font-arcade text-[9px]">START MATCH</button>
+          </div>
+        </div>
+        <div class="col-span-6 glass-panel rounded-2xl p-2.5 flex flex-col gap-1.5 overflow-hidden">
+          <div class="text-[10px] font-extrabold text-sky-300 uppercase">Live Room Chat (Up to 4)</div>
+          <div id="lobby-chat" class="flex-1 min-h-0 overflow-y-auto space-y-1 text-xs pr-1"></div>
+          <div class="flex gap-1.5">
+            <input id="lobby-chat-in" type="text" maxlength="140" placeholder="Chat..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white outline-none" />
+            <button id="btn-lobby-send" class="px-3 py-1 rounded-lg bg-sky-500 text-slate-950 font-extrabold text-xs">Send</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: ARENA GAMEPLAY ==================== -->
+    <section id="view-arena" class="hidden h-full flex flex-col gap-1.5 overflow-hidden">
+      <!-- Compact Match HUD -->
+      <div class="shrink-0 h-9 glass-panel rounded-xl px-2.5 flex items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2 min-w-0">
+          <span id="hud-phase-badge" class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-extrabold text-[10px] uppercase shrink-0">PREP 0:60</span>
+          <span id="hud-turn-text" class="font-bold text-white truncate text-[11px]">Drag &amp; flick to weaken wilds, grab Poké Balls &amp; catch 3 more!</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <div id="hud-scoreboard" class="font-mono-num text-[11px] font-extrabold bg-slate-900 border border-slate-700 px-2.5 py-0.5 rounded-lg text-sky-200">P1 1 vs P2 1</div>
+          <button id="btn-skip-prep" class="hidden px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-[10px]">Ready Now →</button>
+          <button id="btn-arm-ult" class="hidden px-2.5 py-1 rounded-lg bg-gradient-to-r from-yellow-300 to-amber-500 text-slate-950 font-extrabold text-[10px] animate-pulse shadow">⚡ ARM ULT</button>
+          <button id="btn-quit-match" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-red-950 text-[10px] font-bold text-slate-300 border border-slate-700">Quit</button>
+        </div>
+      </div>
+
+      <!-- Full-Space Canvas Arena -->
+      <div id="canvas-wrap" class="flex-1 min-h-0 w-full relative rounded-2xl overflow-hidden border-2 border-slate-700/80 shadow-2xl bg-slate-950">
+        <canvas id="arena-canvas" class="w-full h-full block"></canvas>
+        <!-- Subtle Controls Legend -->
+        <div class="absolute bottom-1.5 left-2 pointer-events-none bg-black/55 px-2 py-0.5 rounded-lg text-[9px] text-slate-300">
+          Drag back on your Pokémon or claimed Item puck → Release to flick • Ring = Ult Charge (100% = ⚡ Ult!)
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MATCH RESULT MODAL -->
+  <div id="modal-result" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-slate-950 border-2 border-amber-400/60 rounded-2xl w-full max-w-md p-5 text-center space-y-3 shadow-2xl">
+      <div id="res-icon" class="text-3xl font-arcade text-amber-300">VICTORY!</div>
+      <p id="res-desc" class="text-xs text-slate-300"></p>
+      <div id="res-unlocks" class="hidden bg-emerald-950/70 border border-emerald-400/50 rounded-xl p-2 text-xs text-emerald-200 font-bold"></div>
+      <div class="flex gap-2">
+        <button id="btn-res-rematch" class="flex-1 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs">Play Again</button>
+        <button id="btn-res-menu" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-xs">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-box" class="fixed bottom-3 right-3 z-[60] flex flex-col gap-1.5 max-w-xs pointer-events-none"></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // =========================================================================
+    // 1. STANDALONE SAVE + READ-ONLY POKEPIT SHINY COSMETIC BRIDGE
+    // =========================================================================
+    const FLICK_SAVE_KEY = 'pokeflick_arena_v1';
+    const POKEPIT_SAVE_KEYS = ['pokepit_slot_roguelike_v2', 'pokepit_slot_roguelike_v1'];
+
+    const spriteUrl = (id, shiny = false) =>
+      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${shiny ? 'shiny/' : ''}${id}.png`;
+    const itemSpriteUrl = (slug) =>
+      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`;
+
+    function getPokepitShinySet() {
+      const set = new Set();
+      for (const k of POKEPIT_SAVE_KEYS) {
+        try {
+          const raw = localStorage.getItem(k);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.pokedex) {
+            Object.entries(parsed.pokedex).forEach(([id, ent]) => {
+              if (ent && ent.shiny) set.add(Number(id));
+            });
+          }
+        } catch (e) {}
+      }
+      return set;
+    }
+
+    function createDefaultFlickSave() {
+      return {
+        wins: 0, matches: 0, kos: 0, goals: 0, wildsCaught: 0, ultsUsed: 0,
+        kothWins: 0, ctfWins: 0, soccerWins: 0,
+        selectedStarter: 4, useShinyCosmetic: false
+      };
+    }
+
+    let flickSave = createDefaultFlickSave();
+    function loadFlickSave() {
+      try {
+        const raw = localStorage.getItem(FLICK_SAVE_KEY);
+        if (raw) flickSave = Object.assign(createDefaultFlickSave(), JSON.parse(raw));
+      } catch (e) { flickSave = createDefaultFlickSave(); }
+    }
+    function saveFlick() {
+      try { localStorage.setItem(FLICK_SAVE_KEY, JSON.stringify(flickSave)); } catch (e) {}
+    }
+
+    // Same starter lineup as PokéPit, with PokéFlick-specific unlock requirements!
+    const STARTERS = [
+      { id: 1, name: 'Bulbasaur', gen: 1, type: 'grass' }, { id: 4, name: 'Charmander', gen: 1, type: 'fire' }, { id: 7, name: 'Squirtle', gen: 1, type: 'water' },
+      { id: 152, name: 'Chikorita', gen: 2, type: 'grass' }, { id: 155, name: 'Cyndaquil', gen: 2, type: 'fire' }, { id: 158, name: 'Totodile', gen: 2, type: 'water' },
+      { id: 252, name: 'Treecko', gen: 3, type: 'grass' }, { id: 255, name: 'Torchic', gen: 3, type: 'fire' }, { id: 258, name: 'Mudkip', gen: 3, type: 'water' },
+      { id: 387, name: 'Turtwig', gen: 4, type: 'grass' }, { id: 390, name: 'Chimchar', gen: 4, type: 'fire' }, { id: 393, name: 'Piplup', gen: 4, type: 'water' },
+      { id: 495, name: 'Snivy', gen: 5, type: 'grass' }, { id: 498, name: 'Tepig', gen: 5, type: 'fire' }, { id: 501, name: 'Oshawott', gen: 5, type: 'water' },
+      { id: 650, name: 'Chespin', gen: 6, type: 'grass' }, { id: 653, name: 'Fennekin', gen: 6, type: 'fire' }, { id: 656, name: 'Froakie', gen: 6, type: 'water' },
+      { id: 722, name: 'Rowlet', gen: 7, type: 'grass' }, { id: 725, name: 'Litten', gen: 7, type: 'fire' }, { id: 728, name: 'Popplio', gen: 7, type: 'water' },
+      { id: 810, name: 'Grookey', gen: 8, type: 'grass' }, { id: 813, name: 'Scorbunny', gen: 8, type: 'fire' }, { id: 816, name: 'Sobble', gen: 8, type: 'water' },
+      { id: 906, name: 'Sprigatito', gen: 9, type: 'grass' }, { id: 909, name: 'Fuecoco', gen: 9, type: 'fire' }, { id: 912, name: 'Quaxly', gen: 9, type: 'water' },
+      { id: 25, name: 'Pikachu', gen: 'sp', type: 'electric' }, { id: 133, name: 'Eevee', gen: 'sp', type: 'normal' },
+      // Special Unlockable Starters (unique PokéFlick milestones!)
+      { id: 147, name: 'Dratini', gen: 'unlock', type: 'dragon', req: 'Win 1 Match', check: s => s.wins >= 1 },
+      { id: 246, name: 'Larvitar', gen: 'unlock', type: 'rock', req: 'KO 6 Opponents', check: s => s.kos >= 6 },
+      { id: 447, name: 'Riolu', gen: 'unlock', type: 'fighting', req: 'Use 3 Ultimates', check: s => s.ultsUsed >= 3 },
+      { id: 374, name: 'Beldum', gen: 'unlock', type: 'steel', req: 'Win King of the Hill', check: s => s.kothWins >= 1 },
+      { id: 443, name: 'Gible', gen: 'unlock', type: 'dragon', req: 'Catch 8 Wilds', check: s => s.wildsCaught >= 8 },
+      { id: 570, name: 'Zorua', gen: 'unlock', type: 'dark', req: 'Win Capture the Flag', check: s => s.ctfWins >= 1 },
+      { id: 778, name: 'Mimikyu', gen: 'unlock', type: 'ghost', req: 'Score 3 Soccer Goals', check: s => s.goals >= 3 },
+      { id: 885, name: 'Dreepy', gen: 'unlock', type: 'dragon', req: 'Win 4 Matches', check: s => s.wins >= 4 },
+      { id: 151, name: 'Mew', gen: 'unlock', type: 'psychic', req: 'Win 7 Matches', check: s => s.wins >= 7 }
+    ];
+
+    const WILD_POOL = [
+      { id: 16, name: 'Pidgey', type: 'flying' }, { id: 19, name: 'Rattata', type: 'normal' },
+      { id: 39, name: 'Jigglypuff', type: 'fairy' }, { id: 52, name: 'Meowth', type: 'normal' },
+      { id: 54, name: 'Psyduck', type: 'water' }, { id: 58, name: 'Growlithe', type: 'fire' },
+      { id: 63, name: 'Abra', type: 'psychic' }, { id: 66, name: 'Machop', type: 'fighting' },
+      { id: 74, name: 'Geodude', type: 'rock' }, { id: 92, name: 'Gastly', type: 'ghost' },
+      { id: 100, name: 'Voltorb', type: 'electric' }, { id: 123, name: 'Scyther', type: 'bug' },
+      { id: 131, name: 'Lapras', type: 'ice' }, { id: 143, name: 'Snorlax', type: 'normal' },
+      { id: 197, name: 'Umbreon', type: 'dark' }, { id: 212, name: 'Scizor', type: 'steel' },
+      { id: 282, name: 'Gardevoir', type: 'psychic' }, { id: 448, name: 'Lucario', type: 'fighting' }
+    ];
+
+    const TYPE_COLOR = {
+      fire: '#f97316', water: '#3b82f6', grass: '#22c55e', electric: '#eab308',
+      psychic: '#ec4899', dragon: '#6366f1', fighting: '#dc2626', rock: '#a16207',
+      steel: '#64748b', ghost: '#7c3aed', dark: '#475569', ice: '#38bdf8',
+      flying: '#818cf8', bug: '#84cc16', fairy: '#f472b6', normal: '#94a3b8'
+    };
+
+    const ULTS = {
+      fire:     { name: 'Inferno Nova',   desc: 'Explodes in AoE fire blast on impact!' },
+      water:    { name: 'Hydro Surge',    desc: '1.6× speed piercing wave + huge push!' },
+      grass:    { name: 'Giga Drain',     desc: 'Heavy hit + heals team for 60% damage!' },
+      electric: { name: 'Volt Dash',      desc: 'Zero-friction dash + chains lightning!' },
+      psychic:  { name: 'Psyshock Pulse', desc: 'Shockwave damages foes & heals self!' },
+      dragon:   { name: 'Meteor Slam',    desc: '2.2× heavy juggernaut impact!' },
+      fighting: { name: 'Close Combat',   desc: '2.2× burst smash + massive knockback!' },
+      rock:     { name: 'Rock Wrecker',   desc: '2.0× armor slam + AoE tremor!' },
+      steel:    { name: 'Iron Meteor',    desc: '2.0× heavy slam + shields self!' },
+      ghost:    { name: 'Shadow Force',   desc: '1.8× strike + drains enemy Ult!' },
+      dark:     { name: 'Night Slash',    desc: '2.0× crit dash + steals Ult charge!' },
+      ice:      { name: 'Blizzard Burst', desc: 'AoE frost nova slows nearby foes!' },
+      flying:   { name: 'Sky Attack',     desc: '1.7× supersonic launch + heavy hit!' },
+      bug:      { name: 'X-Scissor Rush', desc: '1.8× speed strike + extra bounce!' },
+      fairy:    { name: 'Moonblast',      desc: 'AoE beam + heals nearby allies!' },
+      normal:   { name: 'Hyper Impact',   desc: '2.1× raw power smash!' }
+    };
+
+    const MODES = [
+      { id: 'ko',     name: 'KO Battle',   desc: 'KO all opponent Pokémon!' },
+      { id: 'soccer', name: 'Soccer Mode', desc: 'First to 3 Goals wins!' },
+      { id: 'koth',   name: 'King of Hill', desc: 'Hold center ring to 100 pts!' },
+      { id: 'ctf',    name: 'Capture Flag', desc: 'Steal & return flag (2 caps)!' }
+    ];
+
+    const ARENAS = [
+      { id: 'stadium', name: 'Viridian Field', friction: 0.983, bg1: '#14532d', bg2: '#052e16', desc: 'Balanced turf + corner bumpers' },
+      { id: 'cavern',  name: 'Mt. Moon',       friction: 0.985, bg1: '#334155', bg2: '#0f172a', desc: '4 stone pillars for ricochets' },
+      { id: 'ice',     name: 'Cerulean Ice',   friction: 0.992, bg1: '#0c4a6e', bg2: '#082f49', desc: 'Slippery ice + center bumper' },
+      { id: 'plant',   name: 'Power Plant',    friction: 0.984, bg1: '#422006', bg2: '#1c1917', desc: 'Electric speed-boost pads!' }
+    ];
+
+    const FIELD_ITEMS = [
+      { id: 'pokeball', name: 'Poké Ball', sprite: 'poke-ball', color: '#ef4444' },
+      { id: 'potion',   name: 'Potion',    sprite: 'potion',    color: '#22c55e' },
+      { id: 'xattack',  name: 'X-Attack',  sprite: 'x-attack',  color: '#f97316' },
+      { id: 'candy',    name: 'Rare Candy', sprite: 'rare-candy', color: '#38bdf8' },
+      { id: 'bomb',     name: 'Voltorb',   sprite: 'ultra-ball', color: '#facc15' }
+    ];
+
+    // =========================================================================
+    // 2. WEB AUDIO SFX
+    // =========================================================================
+    const SFX = {
+      ctx: null, muted: false,
+      init() {
+        if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      },
+      tone(f, d, t = 'triangle', v = 0.08, delay = 0) {
+        if (this.muted) return; this.init(); if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = t; o.frequency.setValueAtTime(f, now);
+        g.gain.setValueAtTime(v, now); g.gain.exponentialRampToValueAtTime(0.001, now + d);
+        o.connect(g); g.connect(this.ctx.destination); o.start(now); o.stop(now + d + 0.02);
+      },
+      flick() { this.tone(280, 0.07, 'sine', 0.09); this.tone(440, 0.06, 'triangle', 0.07, 0.03); },
+      hit(heavy = false) { this.tone(heavy ? 110 : 180, heavy ? 0.14 : 0.08, 'sawtooth', heavy ? 0.12 : 0.08); },
+      catchOk() { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.12, 'triangle', 0.09, i * 0.07)); },
+      ult() { [330, 440, 660, 880, 1174].forEach((f, i) => this.tone(f, 0.14, 'square', 0.09, i * 0.05)); },
+      goal() { [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, 0.16, 'square', 0.09, i * 0.07)); },
+      divider() { [600, 480, 360, 880].forEach((f, i) => this.tone(f, 0.14, 'sawtooth', 0.1, i * 0.08)); }
+    };
+
+    // Image sprite cache for canvas rendering
+    const imgCache = {};
+    function getImg(url) {
+      if (!imgCache[url]) {
+        const im = new Image();
+        im.src = url;
+        imgCache[url] = im;
+      }
+      return imgCache[url];
+    }
+
+    // =========================================================================
+    // 3. STATE, LOBBY & PEERJS LIVE PVP
+    // =========================================================================
+    let selMode = 'ko';
+    let selArena = 'stadium';
+    let selPlayType = 'ai';
+    let starterGen = 'all';
+    let currentView = 'menu';
+
+    let peer = null, hostConn = null, guestConns = [], lobby = null;
+    let lastNetSync = 0;
+
+    function broadcastFromHost(pkt, excludeConn = null) {
+      guestConns.forEach(c => {
+        if (c && c.open && c !== excludeConn) {
+          try { c.send(pkt); } catch (e) {}
+        }
+      });
+    }
+
+    function sendToHostOrAll(pkt) {
+      if (lobby && lobby.isHost) broadcastFromHost(pkt);
+      else if (hostConn && hostConn.open) { try { hostConn.send(pkt); } catch (e) {} }
+    }
+
+    function serializeMatchSnapshot() {
+      if (!match) return null;
+      return {
+        type: 'state_snap',
+        phase: match.phase,
+        prepRemaining: Number(match.prepRemaining.toFixed(1)),
+        dividerActive: match.dividerActive,
+        turn: match.turn,
+        turnPlayerIdx: match.turnPlayerIdx,
+        turnOrder: match.turnOrder,
+        shotInProgress: match.shotInProgress,
+        goals: match.goals,
+        koth: match.koth,
+        ctf: match.ctf,
+        pucks: match.pucks.map(p => ({
+          id: p.id, kind: p.kind, team: p.team, ownerPlayer: p.ownerPlayer || 0,
+          monId: p.monId, name: p.name, type: p.type, shiny: p.shiny,
+          itemType: p.itemType, ownerTeam: p.ownerTeam,
+          x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10,
+          vx: Math.round(p.vx * 100) / 100, vy: Math.round(p.vy * 100) / 100,
+          r: p.r, hp: p.hp, maxHp: p.maxHp, atk: p.atk, ult: p.ult,
+          ultArmed: p.ultArmed, carryFlagTeam: p.carryFlagTeam, alive: p.alive
+        }))
+      };
+    }
+
+    function applyMatchSnapshot(snap) {
+      if (!match || !snap) return;
+      match.phase = snap.phase;
+      match.prepRemaining = snap.prepRemaining;
+      match.dividerActive = snap.dividerActive;
+      match.turn = snap.turn;
+      match.turnPlayerIdx = snap.turnPlayerIdx;
+      match.turnOrder = snap.turnOrder || match.turnOrder;
+      match.shotInProgress = snap.shotInProgress;
+      match.goals = snap.goals;
+      match.koth = snap.koth;
+      match.ctf = snap.ctf;
+      match.pucks = snap.pucks.map(p => Object.assign(createPuck({ kind: p.kind, x: p.x, y: p.y }), p));
+      updateArenaHud();
+    }
+
+    function showToast(msg, tone = 'sky') {
+      const cls = { sky: 'bg-sky-950 border-sky-400 text-sky-100', emerald: 'bg-emerald-950 border-emerald-400 text-emerald-100', amber: 'bg-amber-950 border-amber-400 text-amber-100', red: 'bg-red-950 border-red-400 text-red-100' }[tone] || 'bg-slate-900 border-slate-500 text-white';
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto px-3 py-1.5 rounded-xl border text-[11px] font-bold shadow-xl ${cls}`;
+      el.textContent = msg;
+      document.getElementById('toast-box').appendChild(el);
+      setTimeout(() => el.remove(), 2800);
+    }
+
+    function switchView(v) {
+      currentView = v;
+      ['menu', 'lobby', 'arena'].forEach(k => document.getElementById(`view-${k}`).classList.toggle('hidden', k !== v));
+      document.getElementById('btn-flick-home').classList.toggle('hidden', v === 'menu' || v === 'arena');
+      if (v === 'menu') renderMenu();
+      lucide.createIcons();
+    }
+
+    // =========================================================================
+    // 4. PHYSICS ARENA ENGINE (PREP PHASE + DIVIDER + 4 MODES + ULTS + ITEMS)
+    // =========================================================================
+    const ARENA_W = 960, ARENA_H = 500;
+    let match = null;
+    let rafId = null;
+    let dragState = null; // { puck, startX, startY, curX, curY }
+    let selectedUltPuck = null;
+
+    function createPuck(opts) {
+      return {
+        id: Math.random().toString(36).slice(2, 9),
+        kind: opts.kind, // 'mon' | 'wild' | 'item' | 'ball' | 'flag'
+        team: opts.team || 0, // 1 = P1 (left), 2 = P2 (right), 0 = neutral
+        monId: opts.monId || 25,
+        name: opts.name || 'Pokémon',
+        type: opts.type || 'normal',
+        shiny: !!opts.shiny,
+        itemType: opts.itemType || null,
+        ownerTeam: opts.ownerTeam || 0, // for claimed items & flags
+        x: opts.x, y: opts.y, vx: 0, vy: 0,
+        r: opts.r || 24,
+        mass: opts.mass || 1.2,
+        hp: opts.hp || 100,
+        maxHp: opts.maxHp || 100,
+        atk: opts.atk || 26,
+        ult: 0,
+        ultArmed: false,
+        atkBuff: 0,
+        slowTurns: 0,
+        carryFlagTeam: 0,
+        alive: true
+      };
+    }
+
+    function buildArenaObstacles(arenaId) {
+      if (arenaId === 'cavern') {
+        return [
+          { type: 'pillar', x: 270, y: 155, r: 24 }, { type: 'pillar', x: 270, y: 345, r: 24 },
+          { type: 'pillar', x: 690, y: 155, r: 24 }, { type: 'pillar', x: 690, y: 345, r: 24 }
+        ];
+      }
+      if (arenaId === 'ice') {
+        return [{ type: 'bumper', x: ARENA_W / 2, y: ARENA_H / 2, r: 28 }];
+      }
+      if (arenaId === 'plant') {
+        return [
+          { type: 'boost', x: 260, y: 250, r: 30, dx: 1, dy: 0 },
+          { type: 'boost', x: 700, y: 250, r: 30, dx: -1, dy: 0 },
+          { type: 'bumper', x: 480, y: 120, r: 20 }, { type: 'bumper', x: 480, y: 380, r: 20 }
+        ];
+      }
+      // stadium
+      return [
+        { type: 'bumper', x: 140, y: 95, r: 18 }, { type: 'bumper', x: 140, y: 405, r: 18 },
+        { type: 'bumper', x: 820, y: 95, r: 18 }, { type: 'bumper', x: 820, y: 405, r: 18 }
+      ];
+    }
+
+    function startMatch(onlineCfg = null) {
+      const starter = STARTERS.find(s => s.id === flickSave.selectedStarter) || STARTERS[1];
+      const pokepitShinies = getPokepitShinySet();
+      const p1Shiny = flickSave.useShinyCosmetic && pokepitShinies.has(starter.id);
+      const oppStarter = STARTERS[Math.floor(Math.random() * 29)];
+      const arenaObj = ARENAS.find(a => a.id === selArena) || ARENAS[0];
+
+      const pucks = [];
+      let turnOrder = [{ slot: 1, team: 1, name: 'Player 1' }, { slot: 2, team: 2, name: 'Player 2' }];
+      if (onlineCfg && Array.isArray(onlineCfg.players) && onlineCfg.players.length >= 2) {
+        // Build alternating Blue/Red turn order for 1v1, 2v1, or 2v2!
+        const t1 = onlineCfg.players.filter(p => p.team === 1);
+        const t2 = onlineCfg.players.filter(p => p.team === 2);
+        turnOrder = [];
+        const maxLen = Math.max(t1.length, t2.length);
+        for (let k = 0; k < maxLen; k++) {
+          if (t1[k]) turnOrder.push(t1[k]);
+          if (t2[k]) turnOrder.push(t2[k]);
+        }
+        // Spawn each connected player's chosen Starter on their team's half!
+        t1.forEach((pl, idx) => {
+          const st = STARTERS.find(x => x.id === pl.starterId) || starter;
+          const y = t1.length === 1 ? ARENA_H / 2 : (idx === 0 ? ARENA_H * 0.34 : ARENA_H * 0.66);
+          const pk = createPuck({ kind: 'mon', team: 1, monId: st.id, name: st.name, type: st.type, shiny: !!pl.shiny, x: 115, y, hp: 115, maxHp: 115, atk: 28, r: 25 });
+          pk.ownerPlayer = pl.slot;
+          pucks.push(pk);
+        });
+        t2.forEach((pl, idx) => {
+          const st = STARTERS.find(x => x.id === pl.starterId) || oppStarter;
+          const y = t2.length === 1 ? ARENA_H / 2 : (idx === 0 ? ARENA_H * 0.34 : ARENA_H * 0.66);
+          const pk = createPuck({ kind: 'mon', team: 2, monId: st.id, name: st.name, type: st.type, shiny: !!pl.shiny, x: ARENA_W - 115, y, hp: 115, maxHp: 115, atk: 28, r: 25 });
+          pk.ownerPlayer = pl.slot;
+          pucks.push(pk);
+        });
+      } else {
+        pucks.push(createPuck({ kind: 'mon', team: 1, monId: starter.id, name: starter.name, type: starter.type, shiny: p1Shiny, x: 120, y: ARENA_H / 2, hp: 115, maxHp: 115, atk: 28, r: 25 }));
+        pucks.push(createPuck({ kind: 'mon', team: 2, monId: oppStarter.id, name: oppStarter.name, type: oppStarter.type, shiny: false, x: ARENA_W - 120, y: ARENA_H / 2, hp: 115, maxHp: 115, atk: 28, r: 25 }));
+      }
+
+      // Prespawn 3 Poké Balls + 3 Wild Pokémon on EACH player's side for the 60s Team Build Prep Phase!
+      for (let side = 1; side <= 2; side++) {
+        const baseX = side === 1 ? 175 : ARENA_W - 175;
+        const wildX = side === 1 ? 335 : ARENA_W - 335;
+        for (let i = 0; i < 3; i++) {
+          const yPos = 120 + i * 130;
+          pucks.push(createPuck({ kind: 'item', itemType: 'pokeball', ownerTeam: side, x: baseX, y: yPos, r: 15, mass: 0.7 }));
+          const w = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+          pucks.push(createPuck({ kind: 'wild', team: 0, monId: w.id, name: w.name, type: w.type, x: wildX + (Math.random() * 40 - 20), y: yPos, hp: 60, maxHp: 60, atk: 18, r: 21 }));
+        }
+      }
+
+      match = {
+        mode: (onlineCfg && onlineCfg.mode) ? onlineCfg.mode : selMode,
+        arena: (onlineCfg && onlineCfg.arenaId) ? (ARENAS.find(a => a.id === onlineCfg.arenaId) || arenaObj) : arenaObj,
+        playType: onlineCfg ? 'online' : selPlayType,
+        isHost: onlineCfg ? !!onlineCfg.isHost : true,
+        myTeam: onlineCfg ? onlineCfg.myTeam : 1,
+        mySlot: onlineCfg ? onlineCfg.mySlot : 1,
+        turnOrder,
+        turnPlayerIdx: 0,
+        phase: 'prep',
+        prepRemaining: 60,
+        dividerActive: true,
+        turn: turnOrder[0] ? turnOrder[0].team : 1,
+        turnNumber: 1,
+        shotInProgress: false,
+        pucks,
+        obstacles: buildArenaObstacles(arenaObj.id),
+        particles: [],
+        popups: [],
+        goals: { 1: 0, 2: 0 },
+        koth: { 1: 0, 2: 0 },
+        ctf: { 1: 0, 2: 0 },
+        aiPrepCooldown: 2.2,
+        lastTime: performance.now()
+      };
+
+      selectedUltPuck = null;
+      document.getElementById('modal-result').classList.add('hidden');
+      switchView('arena');
+      updateArenaHud();
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(gameLoop);
+      SFX.flick();
+    }
+
+    function endPrepPhase() {
+      if (!match || match.phase !== 'prep') return;
+      match.phase = 'battle';
+      match.dividerActive = false;
+      match.turn = 1;
+      SFX.divider();
+      spawnBurst(ARENA_W / 2, ARENA_H / 2, '#38bdf8', 32);
+      addCanvasPopup(ARENA_W / 2, ARENA_H / 2 - 20, 'DIVIDER DOWN — BATTLE START!', '#fde047');
+
+      // Spawn Mode-Specific Objects!
+      if (match.mode === 'soccer') {
+        match.pucks.push(createPuck({ kind: 'ball', team: 0, x: ARENA_W / 2, y: ARENA_H / 2, r: 19, mass: 0.65 }));
+      } else if (match.mode === 'ctf') {
+        match.pucks.push(createPuck({ kind: 'flag', ownerTeam: 1, x: 65, y: ARENA_H / 2, r: 16, mass: 0.5 }));
+        match.pucks.push(createPuck({ kind: 'flag', ownerTeam: 2, x: ARENA_W - 65, y: ARENA_H / 2, r: 16, mass: 0.5 }));
+      }
+      updateArenaHud();
+    }
+
+    function spawnMidMatchExtras() {
+      if (!match || match.phase !== 'battle') return;
+      const wilds = match.pucks.filter(p => p.alive && p.kind === 'wild');
+      if (wilds.length < 2 && Math.random() < 0.45) {
+        const w = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+        match.pucks.push(createPuck({
+          kind: 'wild', team: 0, monId: w.id, name: w.name, type: w.type,
+          x: 220 + Math.random() * (ARENA_W - 440), y: 80 + Math.random() * (ARENA_H - 160),
+          hp: 65, maxHp: 65, atk: 20, r: 21
+        }));
+      }
+      const items = match.pucks.filter(p => p.alive && p.kind === 'item');
+      if (items.length < 3 && Math.random() < 0.55) {
+        const it = FIELD_ITEMS[Math.floor(Math.random() * FIELD_ITEMS.length)];
+        match.pucks.push(createPuck({
+          kind: 'item', itemType: it.id, ownerTeam: 0,
+          x: 190 + Math.random() * (ARENA_W - 380), y: 80 + Math.random() * (ARENA_H - 160),
+          r: 15, mass: 0.7
+        }));
+      }
+    }
+
+    function spawnBurst(x, y, color, count = 14) {
+      if (!match) return;
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 5.5;
+        match.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, color, r: 2.5 + Math.random() * 3 });
+      }
+    }
+
+    function addCanvasPopup(x, y, text, color = '#fde047') {
+      if (!match) return;
+      match.popups.push({ x, y, text, color, life: 1.2 });
+    }
+
+    function executeFlick(puck, vx, vy, fromRemote = false) {
+      if (!match || !puck || !puck.alive) return;
+      const speedMult = puck.ultArmed ? 1.45 : (puck.slowTurns > 0 ? 0.65 : 1.0);
+      puck.vx = vx * speedMult;
+      puck.vy = vy * speedMult;
+      if (puck.slowTurns > 0) puck.slowTurns--;
+      if (puck.ultArmed) {
+        SFX.ult();
+        flickSave.ultsUsed++; saveFlick();
+        spawnBurst(puck.x, puck.y, TYPE_COLOR[puck.type] || '#facc15', 22);
+        addCanvasPopup(puck.x, puck.y - 26, `${(ULTS[puck.type] || ULTS.normal).name.toUpperCase()}!`, '#fde047');
+      } else {
+        SFX.flick();
+      }
+      if (match.phase === 'battle') match.shotInProgress = true;
+      if (!fromRemote && match.playType === 'online') {
+        if (!match.isHost && hostConn && hostConn.open) {
+          try { hostConn.send({ type: 'flick', id: puck.id, vx, vy, ultArmed: puck.ultArmed }); } catch (e) {}
+        } else if (match.isHost) {
+          broadcastFromHost(serializeMatchSnapshot());
+        }
+      }
+      selectedUltPuck = null;
+      updateArenaHud();
+    }
+
+    function triggerUltImpact(attacker, target) {
+      const t = attacker.type;
+      const col = TYPE_COLOR[t] || '#facc15';
+      spawnBurst(target.x, target.y, col, 26);
+      const mult = ['dragon', 'fighting', 'normal'].includes(t) ? 2.2 : (['rock', 'steel', 'dark'].includes(t) ? 2.0 : 1.65);
+      const dmg = Math.round(attacker.atk * mult * (attacker.atkBuff > 0 ? 1.5 : 1));
+      applyDamage(attacker, target, dmg, true);
+
+      // Type-specific Ult secondary effects!
+      if (['fire', 'rock', 'ice', 'fairy'].includes(t)) {
+        match.pucks.forEach(p => {
+          if (p.alive && p !== attacker && p !== target && (p.kind === 'mon' || p.kind === 'wild') && p.team !== attacker.team) {
+            const dist = Math.hypot(p.x - target.x, p.y - target.y);
+            if (dist < 145) {
+              applyDamage(attacker, p, Math.round(dmg * 0.55), false);
+              if (t === 'ice') p.slowTurns = 2;
+              const ang = Math.atan2(p.y - target.y, p.x - target.x);
+              p.vx += Math.cos(ang) * 7; p.vy += Math.sin(ang) * 7;
+            }
+          }
+        });
+      }
+      if (['grass', 'psychic', 'fairy'].includes(t)) {
+        const heal = Math.round(dmg * 0.55);
+        attacker.hp = Math.min(attacker.maxHp, attacker.hp + heal);
+        addCanvasPopup(attacker.x, attacker.y - 20, `+${heal} HP`, '#4ade80');
+      }
+      if (t === 'electric') {
+        const foes = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team !== attacker.team && p !== target);
+        foes.slice(0, 2).forEach(f => { applyDamage(attacker, f, Math.round(dmg * 0.5), false); spawnBurst(f.x, f.y, '#facc15', 12); });
+      }
+      if (t === 'water') {
+        const ang = Math.atan2(target.y - attacker.y, target.x - attacker.x);
+        target.vx += Math.cos(ang) * 11; target.vy += Math.sin(ang) * 11;
+      }
+      attacker.ult = 0;
+      attacker.ultArmed = false;
+    }
+
+    function applyDamage(attacker, target, dmg, isUlt = false) {
+      if (!target.alive || (target.kind !== 'mon' && target.kind !== 'wild')) return;
+      target.hp = Math.max(0, target.hp - dmg);
+      SFX.hit(isUlt);
+      addCanvasPopup(target.x, target.y - 16, `-${dmg}`, isUlt ? '#facc15' : '#f87171');
+
+      if (attacker && attacker.kind === 'mon' && !isUlt) {
+        attacker.ult = Math.min(100, attacker.ult + Math.min(40, Math.round(dmg * 0.95)));
+      }
+      if (target.hp <= 0) {
+        target.alive = false;
+        spawnBurst(target.x, target.y, '#ef4444', 22);
+        addCanvasPopup(target.x, target.y - 28, `${target.name} KO!`, '#ef4444');
+        if (target.kind === 'mon' && target.team === 2 && attacker && attacker.team === 1) {
+          flickSave.kos++; saveFlick();
+        }
+        // Drop flag if carrying one!
+        if (target.carryFlagTeam) {
+          const fl = match.pucks.find(p => p.kind === 'flag' && p.ownerTeam === target.carryFlagTeam);
+          if (fl) { fl.alive = true; fl.x = target.x; fl.y = target.y; }
+          target.carryFlagTeam = 0;
+        }
+      }
+    }
+
+    function handleItemCollision(item, other) {
+      if (!item.alive || !other.alive) return;
+      // 1) Unclaimed item hit by a Pokémon -> Claim it for that player!
+      if (item.ownerTeam === 0 && other.kind === 'mon') {
+        item.ownerTeam = other.team;
+        item.vx = 0; item.vy = 0;
+        spawnBurst(item.x, item.y, '#38bdf8', 10);
+        addCanvasPopup(item.x, item.y - 18, `P${other.team} CLAIMED ${item.itemType.toUpperCase()}!`, '#38bdf8');
+        SFX.catchOk();
+        return;
+      }
+
+      // 2) Claimed item flicked at a target!
+      const speed = Math.hypot(item.vx, item.vy);
+      if (item.ownerTeam > 0 && speed > 1.2) {
+        if (item.itemType === 'pokeball' && other.kind === 'wild') {
+          const teamCount = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === item.ownerTeam).length;
+          const hpRatio = other.hp / other.maxHp;
+          // Weakened wilds are super easy to catch; full-HP wilds still have 45% chance!
+          const catchChance = hpRatio <= 0.65 ? 0.96 : 0.48;
+          item.alive = false;
+          if (Math.random() < catchChance) {
+            SFX.catchOk();
+            spawnBurst(other.x, other.y, '#4ade80', 20);
+            if (teamCount < 4) {
+              other.kind = 'mon';
+              other.team = item.ownerTeam;
+              other.hp = 95; other.maxHp = 95; other.atk = 24; other.r = 24;
+              addCanvasPopup(other.x, other.y - 22, `P${item.ownerTeam} CAUGHT ${other.name}!`, '#4ade80');
+              if (item.ownerTeam === 1) { flickSave.wildsCaught++; saveFlick(); }
+            } else {
+              other.alive = false;
+              addCanvasPopup(other.x, other.y - 22, `TEAM FULL (+HP BOOST)!`, '#38bdf8');
+              match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === item.ownerTeam).forEach(m => { m.hp = Math.min(m.maxHp, m.hp + 20); });
+            }
+          } else {
+            addCanvasPopup(other.x, other.y - 20, `BROKE FREE! WEAKEN IT FIRST!`, '#f87171');
+          }
+        } else if (item.itemType === 'potion' && other.kind === 'mon' && other.team === item.ownerTeam) {
+          item.alive = false;
+          const heal = Math.round(other.maxHp * 0.45);
+          other.hp = Math.min(other.maxHp, other.hp + heal);
+          spawnBurst(other.x, other.y, '#4ade80', 16);
+          addCanvasPopup(other.x, other.y - 20, `+${heal} HP!`, '#4ade80');
+          SFX.catchOk();
+        } else if (item.itemType === 'xattack' && other.kind === 'mon' && other.team === item.ownerTeam) {
+          item.alive = false;
+          other.atkBuff = 2;
+          spawnBurst(other.x, other.y, '#f97316', 16);
+          addCanvasPopup(other.x, other.y - 20, `ATK +50%!`, '#f97316');
+          SFX.catchOk();
+        } else if (item.itemType === 'candy' && other.kind === 'mon' && other.team === item.ownerTeam) {
+          item.alive = false;
+          other.maxHp += 20; other.hp += 20; other.atk += 6; other.ult = Math.min(100, other.ult + 40);
+          spawnBurst(other.x, other.y, '#38bdf8', 18);
+          addCanvasPopup(other.x, other.y - 20, `LEVEL UP! +ULT`, '#38bdf8');
+          SFX.catchOk();
+        } else if (item.itemType === 'bomb' && (other.kind === 'mon' || other.kind === 'wild')) {
+          item.alive = false;
+          spawnBurst(item.x, item.y, '#facc15', 26);
+          SFX.hit(true);
+          match.pucks.forEach(p => {
+            if (p.alive && (p.kind === 'mon' || p.kind === 'wild') && Math.hypot(p.x - item.x, p.y - item.y) < 130) {
+              applyDamage(null, p, 34, true);
+              const ang = Math.atan2(p.y - item.y, p.x - item.x);
+              p.vx += Math.cos(ang) * 9; p.vy += Math.sin(ang) * 9;
+            }
+          });
+        }
+      }
+    }
+
+    function stepPhysics(dt) {
+      if (!match || match.phase === 'over') return;
+
+      // 1) Prep Phase 60s Countdown & AI Prep Actions
+      if (match.phase === 'prep') {
+        match.prepRemaining = Math.max(0, match.prepRemaining - dt);
+        if (match.prepRemaining <= 0) {
+          endPrepPhase();
+        } else if (match.playType === 'ai') {
+          match.aiPrepCooldown -= dt;
+          if (match.aiPrepCooldown <= 0) {
+            match.aiPrepCooldown = 2.6;
+            runAiPrepFlick();
+          }
+        }
+      }
+
+      const fric = match.arena.friction;
+      const alivePucks = match.pucks.filter(p => p.alive);
+
+      // 2) Integrate positions & wall/divider/goal collisions
+      for (const p of alivePucks) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= (p.ultArmed && p.type === 'electric') ? 0.996 : fric;
+        p.vy *= (p.ultArmed && p.type === 'electric') ? 0.996 : fric;
+        if (Math.hypot(p.vx, p.vy) < 0.14) { p.vx = 0; p.vy = 0; }
+
+        // Soccer Goal Check!
+        const inGoalY = p.y > ARENA_H / 2 - 72 && p.y < ARENA_H / 2 + 72;
+        if (match.mode === 'soccer' && p.kind === 'ball' && inGoalY) {
+          if (p.x - p.r < 12) { scoreSoccerGoal(2); return; }
+          if (p.x + p.r > ARENA_W - 12) { scoreSoccerGoal(1); return; }
+        }
+
+        // Outer walls
+        if (p.x - p.r < 14) { p.x = 14 + p.r; p.vx = Math.abs(p.vx) * 0.85; }
+        if (p.x + p.r > ARENA_W - 14) { p.x = ARENA_W - 14 - p.r; p.vx = -Math.abs(p.vx) * 0.85; }
+        if (p.y - p.r < 14) { p.y = 14 + p.r; p.vy = Math.abs(p.vy) * 0.85; }
+        if (p.y + p.r > ARENA_H - 14) { p.y = ARENA_H - 14 - p.r; p.vy = -Math.abs(p.vy) * 0.85; }
+
+        // Prep Phase Center Divider Wall (solid barrier at x = ARENA_W / 2)
+        if (match.dividerActive) {
+          const mid = ARENA_W / 2;
+          if (p.x < mid && p.x + p.r > mid - 4) { p.x = mid - 4 - p.r; p.vx = -Math.abs(p.vx) * 0.85; }
+          else if (p.x >= mid && p.x - p.r < mid + 4) { p.x = mid + 4 + p.r; p.vx = Math.abs(p.vx) * 0.85; }
+        }
+
+        // Obstacles (Pillars, Bumpers, Electric Boost Pads)
+        for (const ob of match.obstacles) {
+          const dx = p.x - ob.x, dy = p.y - ob.y;
+          const dist = Math.hypot(dx, dy);
+          if (ob.type === 'boost') {
+            if (dist < ob.r + p.r * 0.6 && Math.hypot(p.vx, p.vy) > 0.6) {
+              p.vx += ob.dx * 1.1; p.vy += ob.dy * 1.1;
+            }
+          } else if (dist < ob.r + p.r && dist > 0.01) {
+            const nx = dx / dist, ny = dy / dist;
+            p.x = ob.x + nx * (ob.r + p.r);
+            p.y = ob.y + ny * (ob.r + p.r);
+            const dot = p.vx * nx + p.vy * ny;
+            const bounce = ob.type === 'bumper' ? 1.25 : 0.9;
+            p.vx = (p.vx - 2 * dot * nx) * bounce;
+            p.vy = (p.vy - 2 * dot * ny) * bounce;
+            SFX.hit(false);
+          }
+        }
+
+        // CTF Flag Return Check
+        if (match.mode === 'ctf' && p.kind === 'mon' && p.carryFlagTeam) {
+          const homeX = p.team === 1 ? 85 : ARENA_W - 85;
+          if (Math.abs(p.x - homeX) < 55) {
+            match.ctf[p.team]++;
+            SFX.goal();
+            spawnBurst(p.x, p.y, '#facc15', 28);
+            addCanvasPopup(ARENA_W / 2, ARENA_H / 2, `P${p.team} CAPTURED THE FLAG! (${match.ctf[p.team]}/2)`, '#4ade80');
+            const fl = match.pucks.find(f => f.kind === 'flag' && f.ownerTeam === p.carryFlagTeam);
+            if (fl) { fl.alive = true; fl.x = fl.ownerTeam === 1 ? 65 : ARENA_W - 65; fl.y = ARENA_H / 2; }
+            p.carryFlagTeam = 0;
+            if (match.ctf[p.team] >= 2) { finishMatch(p.team, 'Captured 2 enemy flags!'); return; }
+          }
+        }
+      }
+
+      // 3) Puck-to-Puck Collisions
+      for (let i = 0; i < alivePucks.length; i++) {
+        for (let j = i + 1; j < alivePucks.length; j++) {
+          const a = alivePucks[i], b = alivePucks[j];
+          if (!a.alive || !b.alive) continue;
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = a.r + b.r;
+          if (dist < minDist && dist > 0.01) {
+            // Item collision checks
+            if (a.kind === 'item') { handleItemCollision(a, b); if (!a.alive) continue; }
+            if (b.kind === 'item') { handleItemCollision(b, a); if (!b.alive) continue; }
+
+            // CTF Flag Pickup
+            if (a.kind === 'flag' && b.kind === 'mon' && b.team !== a.ownerTeam) {
+              a.alive = false; b.carryFlagTeam = a.ownerTeam;
+              addCanvasPopup(b.x, b.y - 20, `P${b.team} GRABBED FLAG!`, '#facc15'); SFX.catchOk(); continue;
+            }
+            if (b.kind === 'flag' && a.kind === 'mon' && a.team !== b.ownerTeam) {
+              b.alive = false; a.carryFlagTeam = b.ownerTeam;
+              addCanvasPopup(a.x, a.y - 20, `P${a.team} GRABBED FLAG!`, '#facc15'); SFX.catchOk(); continue;
+            }
+
+            // Elastic physics separation & impulse
+            const nx = dx / dist, ny = dy / dist;
+            const overlap = (minDist - dist) / 2;
+            a.x -= nx * overlap; a.y -= ny * overlap;
+            b.x += nx * overlap; b.y += ny * overlap;
+
+            const rvx = b.vx - a.vx, rvy = b.vy - a.vy;
+            const velAlongNormal = rvx * nx + rvy * ny;
+            if (velAlongNormal < 0) {
+              const restitution = (a.kind === 'ball' || b.kind === 'ball') ? 1.15 : 0.88;
+              const jImp = -(1 + restitution) * velAlongNormal / (1 / a.mass + 1 / b.mass);
+              a.vx -= (jImp / a.mass) * nx; a.vy -= (jImp / a.mass) * ny;
+              b.vx += (jImp / b.mass) * nx; b.vy += (jImp / b.mass) * ny;
+
+              // Combat Damage Calculation on Pokémon/Wild impacts!
+              const relSpeed = Math.abs(velAlongNormal);
+              if (relSpeed > 1.8 && (a.kind === 'mon' || a.kind === 'wild') && (b.kind === 'mon' || b.kind === 'wild')) {
+                const aSpd = Math.hypot(a.vx, a.vy), bSpd = Math.hypot(b.vx, b.vy);
+                if (a.team !== b.team) {
+                  if (a.ultArmed) triggerUltImpact(a, b);
+                  else if (b.ultArmed) triggerUltImpact(b, a);
+                  else if (aSpd >= bSpd && a.kind === 'mon') {
+                    const dmg = Math.round(a.atk * Math.min(1.6, relSpeed / 9) * (a.atkBuff > 0 ? 1.5 : 1));
+                    if (a.atkBuff > 0) a.atkBuff--;
+                    applyDamage(a, b, Math.max(8, dmg));
+                  } else if (b.kind === 'mon') {
+                    const dmg = Math.round(b.atk * Math.min(1.6, relSpeed / 9) * (b.atkBuff > 0 ? 1.5 : 1));
+                    if (b.atkBuff > 0) b.atkBuff--;
+                    applyDamage(b, a, Math.max(8, dmg));
+                  }
+                }
+              } else {
+                SFX.hit(false);
+              }
+            }
+          }
+        }
+      }
+
+      // 4) Particles & Popups
+      match.particles.forEach(pt => { pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.035; });
+      match.particles = match.particles.filter(pt => pt.life > 0);
+      match.popups.forEach(pp => { pp.y -= 0.65; pp.life -= 0.018; });
+      match.popups = match.popups.filter(pp => pp.life > 0);
+
+      // 5) Check Turn End during Battle Phase
+      const anyMoving = alivePucks.some(p => Math.hypot(p.vx, p.vy) > 0.25);
+      if (match.phase === 'battle' && match.shotInProgress && !anyMoving) {
+        match.shotInProgress = false;
+        resolveTurnEnd();
+      }
+    }
+
+    function scoreSoccerGoal(scoringTeam) {
+      match.goals[scoringTeam]++;
+      if (scoringTeam === 1) { flickSave.goals++; saveFlick(); }
+      SFX.goal();
+      if (typeof confetti === 'function') confetti({ particleCount: 45, spread: 65 });
+      addCanvasPopup(ARENA_W / 2, ARENA_H / 2, `GOAL FOR P${scoringTeam}! (${match.goals[1]} - ${match.goals[2]})`, '#fde047');
+      if (match.goals[scoringTeam] >= 3) {
+        finishMatch(scoringTeam, `Won Soccer Mode ${match.goals[1]}–${match.goals[2]}!`);
+        return;
+      }
+      // Reset ball to center
+      const ball = match.pucks.find(p => p.kind === 'ball');
+      if (ball) { ball.x = ARENA_W / 2; ball.y = ARENA_H / 2; ball.vx = 0; ball.vy = 0; }
+      match.shotInProgress = false;
+      match.turn = scoringTeam === 1 ? 2 : 1;
+      updateArenaHud();
+      if (match.playType === 'ai' && match.turn === 2) setTimeout(runAiBattleFlick, 700);
+    }
+
+    function resolveTurnEnd() {
+      if (!match || match.phase !== 'battle') return;
+
+      // Check KO Victory
+      const p1Alive = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === 1).length;
+      const p2Alive = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === 2).length;
+      if (p2Alive === 0) { finishMatch(1, 'KO\'d all opponent Pokémon!'); return; }
+      if (p1Alive === 0) { finishMatch(2, 'All your Pokémon were KO\'d!'); return; }
+
+      // King of the Hill Scoring
+      if (match.mode === 'koth') {
+        const inRing = (t) => match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === t && Math.hypot(p.x - ARENA_W / 2, p.y - ARENA_H / 2) < 92).length;
+        const c1 = inRing(1), c2 = inRing(2);
+        if (c1 > c2) { match.koth[1] += 20; addCanvasPopup(ARENA_W / 2, ARENA_H / 2 - 40, `P1 HILL +20 (${match.koth[1]}/100)`, '#38bdf8'); }
+        else if (c2 > c1) { match.koth[2] += 20; addCanvasPopup(ARENA_W / 2, ARENA_H / 2 - 40, `P2 HILL +20 (${match.koth[2]}/100)`, '#f87171'); }
+        if (match.koth[1] >= 100) { finishMatch(1, 'Held the Hill to 100 points!'); return; }
+        if (match.koth[2] >= 100) { finishMatch(2, 'Opponent held the Hill to 100 points!'); return; }
+      }
+
+      match.turnNumber++;
+      if (match.turnNumber % 2 === 0) spawnMidMatchExtras();
+      if (match.turnOrder && match.turnOrder.length > 0) {
+        match.turnPlayerIdx = (match.turnPlayerIdx + 1) % match.turnOrder.length;
+        match.turn = match.turnOrder[match.turnPlayerIdx].team;
+      } else {
+        match.turn = match.turn === 1 ? 2 : 1;
+      }
+      if (match.playType === 'online' && match.isHost) {
+        broadcastFromHost(serializeMatchSnapshot());
+      }
+      updateArenaHud();
+
+      if (match.playType === 'ai' && match.turn === 2) {
+        setTimeout(runAiBattleFlick, 650);
+      }
+    }
+
+    function runAiPrepFlick() {
+      if (!match || match.phase !== 'prep') return;
+      const team2 = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === 2);
+      const wilds2 = match.pucks.filter(p => p.alive && p.kind === 'wild' && p.x > ARENA_W / 2);
+      const balls2 = match.pucks.filter(p => p.alive && p.kind === 'item' && p.itemType === 'pokeball' && p.ownerTeam === 2);
+      if (!team2.length || !wilds2.length || team2.length >= 4) return;
+      const w = wilds2[0];
+      if (w.hp < w.maxHp * 0.7 && balls2.length) {
+        const b = balls2[0];
+        const ang = Math.atan2(w.y - b.y, w.x - b.x);
+        executeFlick(b, Math.cos(ang) * 14, Math.sin(ang) * 14, true);
+      } else {
+        const m = team2[0];
+        const ang = Math.atan2(w.y - m.y, w.x - m.x);
+        executeFlick(m, Math.cos(ang) * 12, Math.sin(ang) * 12, true);
+      }
+    }
+
+    function runAiBattleFlick() {
+      if (!match || match.phase !== 'battle' || match.turn !== 2 || match.shotInProgress) return;
+      const myMons = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === 2);
+      const foes = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === 1);
+      if (!myMons.length || !foes.length) return;
+      const shooter = myMons[Math.floor(Math.random() * myMons.length)];
+      if (shooter.ult >= 100) shooter.ultArmed = true;
+
+      let tx = foes[0].x, ty = foes[0].y;
+      if (match.mode === 'soccer') {
+        const ball = match.pucks.find(p => p.kind === 'ball');
+        if (ball) { tx = ball.x + 12; ty = ball.y; }
+      } else if (match.mode === 'koth' && Math.random() < 0.55) {
+        tx = ARENA_W / 2; ty = ARENA_H / 2;
+      } else if (match.mode === 'ctf') {
+        const f1 = match.pucks.find(p => p.alive && p.kind === 'flag' && p.ownerTeam === 1);
+        if (shooter.carryFlagTeam) { tx = ARENA_W - 60; ty = ARENA_H / 2; }
+        else if (f1) { tx = f1.x; ty = f1.y; }
+      }
+      const ang = Math.atan2(ty - shooter.y, tx - shooter.x) + (Math.random() * 0.16 - 0.08);
+      const pwr = 12 + Math.random() * 6;
+      executeFlick(shooter, Math.cos(ang) * pwr, Math.sin(ang) * pwr, true);
+    }
+
+    function finishMatch(winnerTeam, reason) {
+      if (!match || match.phase === 'over') return;
+      match.phase = 'over';
+      flickSave.matches++;
+      const iWon = (match.playType === 'local') ? true : (winnerTeam === match.myTeam);
+      if (winnerTeam === 1) {
+        flickSave.wins++;
+        if (match.mode === 'koth') flickSave.kothWins++;
+        if (match.mode === 'ctf') flickSave.ctfWins++;
+        if (match.mode === 'soccer') flickSave.soccerWins++;
+      }
+      saveFlick();
+      if (iWon && typeof confetti === 'function') confetti({ particleCount: 70, spread: 80 });
+      SFX.goal();
+
+      document.getElementById('res-icon').textContent = match.playType === 'local' ? `PLAYER ${winnerTeam} WINS!` : (iWon ? 'VICTORY!' : 'DEFEAT');
+      document.getElementById('res-desc').textContent = reason;
+      if (match.playType === 'online' && match.isHost) {
+        broadcastFromHost({ type: 'match_over', winnerTeam, reason });
+      }
+      document.getElementById('modal-result').classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // 5. CANVAS RENDERING & DRAG-AND-RELEASE INPUT
+    // =========================================================================
+    function renderArena() {
+      const canvas = document.getElementById('arena-canvas');
+      if (!canvas || !match) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.round(rect.width) || canvas.height !== Math.round(rect.height)) {
+        canvas.width = Math.max(300, Math.round(rect.width));
+        canvas.height = Math.max(180, Math.round(rect.height));
+      }
+      const ctx = canvas.getContext('2d');
+      const sx = canvas.width / ARENA_W, sy = canvas.height / ARENA_H;
+      ctx.save();
+      ctx.scale(sx, sy);
+
+      // Arena Background
+      const grad = ctx.createRadialGradient(ARENA_W / 2, ARENA_H / 2, 40, ARENA_W / 2, ARENA_H / 2, 560);
+      grad.addColorStop(0, match.arena.bg1);
+      grad.addColorStop(1, match.arena.bg2);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+      // Court Lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(14, 14, ARENA_W - 28, ARENA_H - 28);
+      ctx.beginPath(); ctx.moveTo(ARENA_W / 2, 14); ctx.lineTo(ARENA_W / 2, ARENA_H - 14); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ARENA_W / 2, ARENA_H / 2, 75, 0, Math.PI * 2); ctx.stroke();
+
+      // Mode Overlays (Soccer Goals, King of Hill Ring, CTF Home Zones)
+      if (match.mode === 'soccer') {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)'; ctx.fillRect(0, ARENA_H / 2 - 72, 18, 144);
+        ctx.fillStyle = 'rgba(248, 113, 113, 0.25)'; ctx.fillRect(ARENA_W - 18, ARENA_H / 2 - 72, 18, 144);
+      } else if (match.mode === 'koth') {
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.14)';
+        ctx.beginPath(); ctx.arc(ARENA_W / 2, ARENA_H / 2, 92, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3; ctx.stroke();
+      } else if (match.mode === 'ctf') {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.14)'; ctx.fillRect(14, 14, 75, ARENA_H - 28);
+        ctx.fillStyle = 'rgba(248, 113, 113, 0.14)'; ctx.fillRect(ARENA_W - 89, 14, 75, ARENA_H - 28);
+      }
+
+      // Prep Phase Glowing Energy Divider
+      if (match.dividerActive) {
+        ctx.save();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 8;
+        ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 18;
+        ctx.beginPath(); ctx.moveTo(ARENA_W / 2, 14); ctx.lineTo(ARENA_W / 2, ARENA_H - 14); ctx.stroke();
+        ctx.restore();
+      }
+
+      // Obstacles
+      for (const ob of match.obstacles) {
+        ctx.beginPath(); ctx.arc(ob.x, ob.y, ob.r, 0, Math.PI * 2);
+        if (ob.type === 'boost') {
+          ctx.fillStyle = 'rgba(250, 204, 21, 0.25)'; ctx.fill();
+          ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3; ctx.stroke();
+          ctx.fillStyle = '#fde047'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(ob.dx > 0 ? '»' : '«', ob.x, ob.y + 6);
+        } else if (ob.type === 'bumper') {
+          ctx.fillStyle = '#f43f5e'; ctx.fill();
+          ctx.strokeStyle = '#fda4af'; ctx.lineWidth = 4; ctx.stroke();
+        } else {
+          ctx.fillStyle = '#475569'; ctx.fill();
+          ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4; ctx.stroke();
+        }
+      }
+
+      // Pucks
+      for (const p of match.pucks) {
+        if (!p.alive) continue;
+        ctx.save();
+        // Base disc
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        if (p.kind === 'mon') {
+          ctx.fillStyle = p.team === 1 ? '#0c4a6e' : '#7f1d1d';
+          ctx.fill();
+          ctx.lineWidth = p.ultArmed ? 5 : 3.5;
+          ctx.strokeStyle = p.ultArmed ? '#fde047' : (p.team === 1 ? '#38bdf8' : '#f87171');
+          ctx.stroke();
+
+          // Ult Charge Arc around Puck!
+          if (p.ult > 0) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r + 4, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * (p.ult / 100)));
+            ctx.strokeStyle = p.ult >= 100 ? '#fde047' : '#a855f7';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+
+          // Sprite
+          const im = getImg(spriteUrl(p.monId, p.shiny));
+          if (im.complete && im.naturalWidth) {
+            ctx.drawImage(im, p.x - p.r * 0.95, p.y - p.r * 0.95, p.r * 1.9, p.r * 1.9);
+          }
+
+          // HP Bar
+          const bw = 38, bh = 5;
+          ctx.fillStyle = '#0f172a'; ctx.fillRect(p.x - bw / 2, p.y + p.r + 6, bw, bh);
+          ctx.fillStyle = (p.hp / p.maxHp) > 0.4 ? '#4ade80' : '#ef4444';
+          ctx.fillRect(p.x - bw / 2, p.y + p.r + 6, bw * (p.hp / p.maxHp), bh);
+
+          if (p.carryFlagTeam) {
+            ctx.fillStyle = '#facc15'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('⚑', p.x, p.y - p.r - 6);
+          }
+        } else if (p.kind === 'wild') {
+          ctx.fillStyle = '#064e3b'; ctx.fill();
+          ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2.5; ctx.stroke();
+          const im = getImg(spriteUrl(p.monId, false));
+          if (im.complete && im.naturalWidth) ctx.drawImage(im, p.x - p.r * 0.9, p.y - p.r * 0.9, p.r * 1.8, p.r * 1.8);
+          const bw = 30, bh = 4;
+          ctx.fillStyle = '#0f172a'; ctx.fillRect(p.x - bw / 2, p.y + p.r + 4, bw, bh);
+          ctx.fillStyle = '#34d399'; ctx.fillRect(p.x - bw / 2, p.y + p.r + 4, bw * (p.hp / p.maxHp), bh);
+        } else if (p.kind === 'item') {
+          ctx.fillStyle = p.ownerTeam === 1 ? 'rgba(56,189,248,0.35)' : p.ownerTeam === 2 ? 'rgba(248,113,113,0.35)' : 'rgba(255,255,255,0.12)';
+          ctx.fill();
+          ctx.strokeStyle = p.ownerTeam === 1 ? '#38bdf8' : p.ownerTeam === 2 ? '#f87171' : '#fde047';
+          ctx.lineWidth = 2; ctx.stroke();
+          const meta = FIELD_ITEMS.find(x => x.id === p.itemType) || FIELD_ITEMS[0];
+          const im = getImg(itemSpriteUrl(meta.sprite));
+          if (im.complete && im.naturalWidth) ctx.drawImage(im, p.x - 13, p.y - 13, 26, 26);
+        } else if (p.kind === 'ball') {
+          ctx.fillStyle = '#ffffff'; ctx.fill();
+          ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 3; ctx.stroke();
+          const im = getImg(itemSpriteUrl('premier-ball'));
+          if (im.complete && im.naturalWidth) ctx.drawImage(im, p.x - 16, p.y - 16, 32, 32);
+        } else if (p.kind === 'flag') {
+          ctx.fillStyle = p.ownerTeam === 1 ? '#38bdf8' : '#f87171'; ctx.fill();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.stroke();
+          ctx.fillStyle = '#0f172a'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText('⚑', p.x, p.y + 5);
+        }
+        ctx.restore();
+      }
+
+      // Slingshot Drag Trajectory Line
+      if (dragState && dragState.puck && dragState.puck.alive) {
+        const p = dragState.puck;
+        const dx = p.x - dragState.curX, dy = p.y - dragState.curY;
+        const dist = Math.min(130, Math.hypot(dx, dy));
+        const ang = Math.atan2(dy, dx);
+        ctx.save();
+        ctx.strokeStyle = p.ultArmed ? '#fde047' : '#38bdf8';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + Math.cos(ang) * dist * 1.6, p.y + Math.sin(ang) * dist * 1.6);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Particles & Floating Popups
+      for (const pt of match.particles) {
+        ctx.globalAlpha = Math.max(0, pt.life);
+        ctx.fillStyle = pt.color;
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      for (const pp of match.popups) {
+        ctx.globalAlpha = Math.min(1, pp.life);
+        ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#000'; ctx.fillText(pp.text, pp.x + 1, pp.y + 1);
+        ctx.fillStyle = pp.color; ctx.fillText(pp.text, pp.x, pp.y);
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    function updateArenaHud() {
+      if (!match) return;
+      const badge = document.getElementById('hud-phase-badge');
+      const txt = document.getElementById('hud-turn-text');
+      const sb = document.getElementById('hud-scoreboard');
+      const skipBtn = document.getElementById('btn-skip-prep');
+      const ultBtn = document.getElementById('btn-arm-ult');
+
+      if (match.phase === 'prep') {
+        const secs = Math.ceil(match.prepRemaining);
+        badge.textContent = `PREP 0:${String(secs).padStart(2, '0')}`;
+        badge.className = 'px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-extrabold text-[10px] uppercase shrink-0';
+        txt.textContent = 'Build your team of 4! Weaken wilds & flick Poké Balls at them!';
+        skipBtn.classList.remove('hidden');
+      } else {
+        const curPl = match.turnOrder && match.turnOrder[match.turnPlayerIdx];
+        badge.textContent = (match.playType === 'online' && curPl) ? `${curPl.name.toUpperCase()} (T${curPl.team})` : `P${match.turn} TURN`;
+        badge.className = `px-2 py-0.5 rounded ${match.turn === 1 ? 'bg-sky-400' : 'bg-red-400'} text-slate-950 font-extrabold text-[10px] uppercase shrink-0`;
+        txt.textContent = match.mode === 'soccer' ? 'Smash the ball into the opponent goal!' : (match.mode === 'koth' ? 'Hold the golden center ring!' : (match.mode === 'ctf' ? 'Grab the enemy flag & return it!' : 'KO all opposing Pokémon!'));
+        skipBtn.classList.add('hidden');
+      }
+
+      const p1c = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === 1).length;
+      const p2c = match.pucks.filter(p => p.alive && p.kind === 'mon' && p.team === 2).length;
+      if (match.mode === 'soccer') sb.textContent = `GOALS P1 ${match.goals[1]} - ${match.goals[2]} P2`;
+      else if (match.mode === 'koth') sb.textContent = `HILL P1 ${match.koth[1]} - ${match.koth[2]} P2`;
+      else if (match.mode === 'ctf') sb.textContent = `FLAGS P1 ${match.ctf[1]} - ${match.ctf[2]} P2`;
+      else sb.textContent = `TEAM P1 (${p1c}/4) vs P2 (${p2c}/4)`;
+
+      // Show Arm Ult button if any controllable Pokémon has 100% Ult!
+      const activeTeam = match.phase === 'prep' ? match.myTeam : (match.playType === 'local' ? match.turn : match.myTeam);
+      const readyMon = match.pucks.find(p => p.alive && p.kind === 'mon' && p.team === activeTeam && p.ult >= 100);
+      if (readyMon && !match.shotInProgress) {
+        selectedUltPuck = readyMon;
+        ultBtn.classList.remove('hidden');
+        ultBtn.textContent = readyMon.ultArmed ? `⚡ ${readyMon.name} ULT ARMED!` : `⚡ ARM ${readyMon.name.toUpperCase()} ULT`;
+      } else {
+        ultBtn.classList.add('hidden');
+      }
+    }
+
+    function gameLoop(now) {
+      if (!match) return;
+      const dt = Math.min(0.05, (now - match.lastTime) / 1000);
+      match.lastTime = now;
+      if (match.playType !== 'online' || match.isHost) {
+        stepPhysics(dt);
+        if (match.playType === 'online' && match.isHost && now - lastNetSync > 65) {
+          lastNetSync = now;
+          broadcastFromHost(serializeMatchSnapshot());
+        }
+      }
+      if (match.phase === 'prep') updateArenaHud();
+      renderArena();
+      if (match.phase !== 'over') rafId = requestAnimationFrame(gameLoop);
+    }
+
+    function getCanvasCoords(ev) {
+      const canvas = document.getElementById('arena-canvas');
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: ((ev.clientX - rect.left) / rect.width) * ARENA_W,
+        y: ((ev.clientY - rect.top) / rect.height) * ARENA_H
+      };
+    }
+
+    // =========================================================================
+    // 6. MENU RENDERING & EVENTS
+    // =========================================================================
+    function renderMenu() {
+      document.getElementById('menu-stats-pill').textContent = `${flickSave.wins}W • ${flickSave.kos} KOs • ${flickSave.goals} Goals`;
+      document.getElementById('mode-grid').innerHTML = MODES.map(m => `
+        <button data-sel-mode="${m.id}" class="p-2 rounded-xl border text-left transition ${selMode === m.id ? 'bg-sky-500/25 border-sky-400 text-white' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'}">
+          <div class="text-[11px] font-extrabold">${m.name}</div>
+          <div class="text-[9px] text-slate-400 leading-tight mt-0.5">${m.desc}</div>
+        </button>`).join('');
+
+      document.getElementById('arena-grid').innerHTML = ARENAS.map(a => `
+        <button data-sel-arena="${a.id}" class="p-2 rounded-xl border text-left transition ${selArena === a.id ? 'bg-emerald-500/25 border-emerald-400 text-white' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'}">
+          <div class="text-[11px] font-extrabold">${a.name}</div>
+          <div class="text-[9px] text-slate-400 leading-tight mt-0.5">${a.desc}</div>
+        </button>`).join('');
+
+      document.querySelectorAll('.btn-playtype').forEach(b => {
+        const act = b.dataset.playtype === selPlayType;
+        b.className = `btn-playtype py-1.5 px-2 rounded-xl text-[11px] font-extrabold border transition ${act ? 'bg-amber-400 text-slate-950 border-amber-200' : 'bg-slate-900 text-slate-300 border-slate-700'}`;
+      });
+      document.getElementById('online-room-bar').classList.toggle('hidden', selPlayType !== 'online');
+
+      const gens = [{ k: 'all', l: 'All' }, { k: '1', l: 'G1' }, { k: '2', l: 'G2' }, { k: '3', l: 'G3' }, { k: '4', l: 'G4' }, { k: '5', l: 'G5' }, { k: '6', l: 'G6' }, { k: '7', l: 'G7' }, { k: '8', l: 'G8' }, { k: '9', l: 'G9' }, { k: 'sp', l: 'SP' }, { k: 'unlock', l: 'Unlocks' }];
+      document.getElementById('starter-gen-bar').innerHTML = gens.map(g => `
+        <button data-fgen="${g.k}" class="px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 ${starterGen === g.k ? 'bg-amber-400 text-slate-950 border-amber-200' : 'bg-slate-900 text-slate-300 border-slate-700'}">${g.l}</button>`).join('');
+
+      const pokepitShinies = getPokepitShinySet();
+      const filtered = STARTERS.filter(s => starterGen === 'all' || String(s.gen) === starterGen);
+      document.getElementById('starter-list').innerHTML = filtered.map(st => {
+        const unlocked = !st.check || st.check(flickSave);
+        const hasShiny = pokepitShinies.has(st.id);
+        const sel = flickSave.selectedStarter === st.id;
+        return `
+          <button data-pick-st="${st.id}" ${!unlocked ? 'disabled' : ''} class="p-1.5 rounded-xl border text-center flex flex-col items-center transition ${
+            sel ? 'bg-sky-950/80 border-amber-400' : unlocked ? 'bg-slate-900 border-slate-700 hover:border-slate-500' : 'bg-slate-950 border-slate-800 opacity-45 cursor-not-allowed'
+          }">
+            <div class="w-full flex justify-between text-[8px] font-bold"><span style="color:${TYPE_COLOR[st.type]}">${st.type.slice(0,3).toUpperCase()}</span><span class="text-yellow-300">${hasShiny ? '★' : ''}</span></div>
+            <img src="${spriteUrl(st.id, sel && flickSave.useShinyCosmetic && hasShiny)}" class="w-10 h-10 pixel-art" alt="${st.name}" />
+            <div class="text-[9px] font-extrabold text-white truncate max-w-full">${st.name}</div>
+            ${!unlocked ? `<div class="text-[8px] text-amber-300 leading-tight">${st.req}</div>` : ''}
+          </button>`;
+      }).join('');
+
+      const cur = STARTERS.find(s => s.id === flickSave.selectedStarter) || STARTERS[1];
+      const curHasShiny = pokepitShinies.has(cur.id);
+      const shBtn = document.getElementById('btn-toggle-shiny-cosmetic');
+      shBtn.classList.toggle('hidden', !curHasShiny);
+      shBtn.textContent = flickSave.useShinyCosmetic ? '★ Shiny ON' : '★ Shiny OFF';
+      const ult = ULTS[cur.type] || ULTS.normal;
+      document.getElementById('selected-starter-info').innerHTML = `
+        <div class="flex items-center gap-2 min-w-0">
+          <img src="${spriteUrl(cur.id, flickSave.useShinyCosmetic && curHasShiny)}" class="w-9 h-9 pixel-art ${flickSave.useShinyCosmetic && curHasShiny ? 'shiny-aura' : ''}" />
+          <div class="min-w-0">
+            <div class="font-extrabold text-white truncate">${cur.name} <span class="text-amber-300">⚡ ${ult.name}</span></div>
+            <div class="text-[9px] text-slate-300 truncate">${ult.desc}</div>
+          </div>
+        </div>`;
+    }
+
+    function bindEvents() {
+      document.getElementById('btn-flick-home').addEventListener('click', () => { switchView('menu'); });
+      document.getElementById('btn-switch-slots').addEventListener('click', () => {
+        if (location.protocol.startsWith('http') && !location.hostname.includes('googleusercontent')) {
+          location.href = './index.html';
+        } else {
+          showToast('PokéPit Slots switcher links to index.html on your GitHub Page!', 'amber');
+        }
+      });
+      document.getElementById('btn-toggle-mute').addEventListener('click', () => {
+        SFX.muted = !SFX.muted;
+        document.getElementById('icon-mute').setAttribute('data-lucide', SFX.muted ? 'volume-x' : 'volume-2');
+        lucide.createIcons();
+      });
+      document.getElementById('btn-toggle-fs').addEventListener('click', async () => {
+        try {
+          if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+          else await document.exitFullscreen();
+        } catch (e) {}
+      });
+
+      document.getElementById('mode-grid').addEventListener('click', e => {
+        const b = e.target.closest('[data-sel-mode]'); if (!b) return;
+        selMode = b.dataset.selMode; renderMenu();
+      });
+      document.getElementById('arena-grid').addEventListener('click', e => {
+        const b = e.target.closest('[data-sel-arena]'); if (!b) return;
+        selArena = b.dataset.selArena; renderMenu();
+      });
+      document.querySelectorAll('.btn-playtype').forEach(b => {
+        b.addEventListener('click', () => { selPlayType = b.dataset.playtype; renderMenu(); });
+      });
+      document.getElementById('starter-gen-bar').addEventListener('click', e => {
+        const b = e.target.closest('[data-fgen]'); if (!b) return;
+        starterGen = b.dataset.fgen; renderMenu();
+      });
+      document.getElementById('starter-list').addEventListener('click', e => {
+        const b = e.target.closest('[data-pick-st]'); if (!b || b.disabled) return;
+        flickSave.selectedStarter = Number(b.dataset.pickSt); saveFlick(); renderMenu();
+      });
+      document.getElementById('btn-toggle-shiny-cosmetic').addEventListener('click', () => {
+        flickSave.useShinyCosmetic = !flickSave.useShinyCosmetic; saveFlick(); renderMenu();
+      });
+      document.getElementById('btn-launch-match').addEventListener('click', () => {
+        if (selPlayType === 'online') return showToast('Use Create Room or Join Room for Live P2P!', 'amber');
+        startMatch(null);
+      });
+
+      // Live Real-Time P2P Room Lobby (Supports 1v1 & 2v2 — Up to 4 Players!)
+      const openFlickLobby = (code, isHost) => {
+        if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+        hostConn = null; guestConns = [];
+        const myName = (() => {
+          try { const r = JSON.parse(localStorage.getItem('pokepit_slot_roguelike_v2') || '{}'); if (r.trainerName) return r.trainerName; } catch (e) {}
+          return isHost ? 'Host' : 'Player';
+        })();
+        const myShiny = flickSave.useShinyCosmetic && getPokepitShinySet().has(flickSave.selectedStarter);
+
+        lobby = {
+          code, isHost, mySlot: 1,
+          players: isHost ? [{ slot: 1, team: 1, name: myName, starterId: flickSave.selectedStarter, shiny: myShiny, ready: false }] : [],
+          chat: [`Room ${code} opened (1v1 or 2v2 • Max 4 Players).`]
+        };
+
+        const renderLob = () => {
+          document.getElementById('lobby-code-badge').textContent = lobby.code;
+          document.getElementById('lobby-status-pill').textContent = `${lobby.players.length}/4 Players`;
+          const t1 = lobby.players.filter(p => p.team === 1);
+          const t2 = lobby.players.filter(p => p.team === 2);
+          const slotsHtml = [
+            { label: 'Team Blue • P1', pl: t1[0], border: 'border-sky-500/50' },
+            { label: 'Team Red • P2',  pl: t2[0], border: 'border-red-500/50' },
+            { label: 'Team Blue • P3', pl: t1[1], border: 'border-sky-500/35' },
+            { label: 'Team Red • P4',  pl: t2[1], border: 'border-red-500/35' }
+          ].map(sl => sl.pl
+            ? `<div class="bg-slate-900 border ${sl.border} rounded-xl p-2 flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <img src="${spriteUrl(sl.pl.starterId, sl.pl.shiny)}" class="w-7 h-7 pixel-art shrink-0" />
+                  <div class="min-w-0">
+                    <div class="text-[10px] font-extrabold text-white truncate">${sl.pl.name}${sl.pl.slot === lobby.mySlot ? ' (You)' : ''}</div>
+                    <div class="text-[8px] text-slate-400">${sl.label}</div>
+                  </div>
+                </div>
+                <span class="px-1.5 py-0.5 rounded text-[8px] font-extrabold shrink-0 ${sl.pl.ready ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'}">${sl.pl.ready ? 'RDY' : '...'}</span>
+              </div>`
+            : `<div class="bg-slate-950/60 border border-dashed border-slate-800 rounded-xl p-2 text-[10px] text-slate-500 flex items-center justify-center">${sl.label} (Open)</div>`
+          ).join('');
+          document.getElementById('lobby-slots-list').innerHTML = slotsHtml;
+
+          const me = lobby.players.find(p => p.slot === lobby.mySlot);
+          document.getElementById('btn-lobby-ready').textContent = (me && me.ready) ? '✓ Ready!' : 'Mark Ready';
+          const canStart = lobby.isHost && t1.length >= 1 && t2.length >= 1 && lobby.players.every(p => p.ready);
+          const sBtn = document.getElementById('btn-lobby-start');
+          sBtn.disabled = !canStart;
+          sBtn.textContent = lobby.isHost ? (canStart ? `START ${t1.length}v${t2.length}!` : 'NEED BOTH TEAMS READY') : 'HOST STARTS';
+
+          const cb = document.getElementById('lobby-chat');
+          cb.innerHTML = lobby.chat.map(c => `<div class="bg-slate-900 rounded px-2 py-1 text-[11px] break-words">${c.replace(/</g, '&lt;')}</div>`).join('');
+          cb.scrollTop = cb.scrollHeight;
+        };
+
+        const syncLobbyToAll = () => {
+          if (lobby.isHost) broadcastFromHost({ type: 'lobby_state', players: lobby.players, chat: lobby.chat.slice(-30) });
+        };
+
+        const handlePacket = (d, fromConn) => {
+          if (!d || typeof d !== 'object') return;
+          if (d.type === 'room_full') { showToast('Room full (Max 4 players)!', 'red'); switchView('menu'); return; }
+          if (d.type === 'assign_slot') { lobby.mySlot = d.slot; return; }
+          if (d.type === 'lobby_state' && !lobby.isHost) {
+            lobby.players = d.players || []; lobby.chat = d.chat || []; renderLob(); return;
+          }
+          if (d.type === 'join_hello' && lobby.isHost) {
+            const t1c = lobby.players.filter(p => p.team === 1).length;
+            const t2c = lobby.players.filter(p => p.team === 2).length;
+            const team = t2c <= t1c ? 2 : 1;
+            const slot = (Math.max(0, ...lobby.players.map(p => p.slot)) + 1);
+            fromConn._slot = slot;
+            lobby.players.push({ slot, team, name: d.name || `Player ${slot}`, starterId: d.starterId || 25, shiny: !!d.shiny, ready: false });
+            lobby.chat.push(`${d.name || 'Player'} joined Team ${team === 1 ? 'Blue' : 'Red'}!`);
+            try { fromConn.send({ type: 'assign_slot', slot }); } catch (e) {}
+            syncLobbyToAll(); renderLob(); return;
+          }
+          if (d.type === 'toggle_ready' && lobby.isHost) {
+            const p = lobby.players.find(x => x.slot === d.slot);
+            if (p) p.ready = !p.ready;
+            syncLobbyToAll(); renderLob(); return;
+          }
+          if (d.type === 'swap_team' && lobby.isHost) {
+            const p = lobby.players.find(x => x.slot === d.slot);
+            if (p) {
+              const targetTeam = p.team === 1 ? 2 : 1;
+              if (lobby.players.filter(x => x.team === targetTeam).length < 2) p.team = targetTeam;
+            }
+            syncLobbyToAll(); renderLob(); return;
+          }
+          if (d.type === 'chat' && lobby.isHost) {
+            lobby.chat.push(`${d.name}: ${d.txt}`);
+            syncLobbyToAll(); renderLob(); return;
+          }
+          if (d.type === 'start_match') {
+            const me = (d.players || []).find(p => p.slot === lobby.mySlot) || { team: 2, slot: lobby.mySlot };
+            startMatch({ isHost: false, myTeam: me.team, mySlot: me.slot, players: d.players, mode: d.mode, arenaId: d.arenaId });
+            return;
+          }
+          if (d.type === 'flick' && match && match.isHost) {
+            const pk = match.pucks.find(p => p.id === d.id);
+            if (pk) { pk.ultArmed = !!d.ultArmed; executeFlick(pk, d.vx, d.vy, true); }
+            return;
+          }
+          if (d.type === 'state_snap' && match && !match.isHost) {
+            applyMatchSnapshot(d); return;
+          }
+          if (d.type === 'match_over' && match && !match.isHost) {
+            finishMatch(d.winnerTeam, d.reason); return;
+          }
+        };
+
+        if (typeof Peer !== 'undefined') {
+          const pid = 'POKEFLICK-' + code;
+          if (isHost) {
+            peer = new Peer(pid);
+            peer.on('connection', c => {
+              if (lobby.players.length >= 4) {
+                c.on('open', () => { try { c.send({ type: 'room_full' }); } catch (e) {} setTimeout(() => c.close(), 150); });
+                return;
+              }
+              guestConns.push(c);
+              c.on('data', d => handlePacket(d, c));
+              c.on('close', () => {
+                guestConns = guestConns.filter(x => x !== c);
+                if (c._slot) {
+                  lobby.players = lobby.players.filter(p => p.slot !== c._slot);
+                  lobby.chat.push(`Player ${c._slot} left the room.`);
+                  syncLobbyToAll(); renderLob();
+                }
+              });
+            });
+          } else {
+            peer = new Peer();
+            peer.on('open', () => {
+              hostConn = peer.connect(pid, { reliable: true });
+              hostConn.on('open', () => {
+                hostConn.send({ type: 'join_hello', name: myName, starterId: flickSave.selectedStarter, shiny: myShiny });
+              });
+              hostConn.on('data', d => handlePacket(d, hostConn));
+            });
+          }
+        }
+
+        switchView('lobby'); renderLob();
+
+        document.getElementById('btn-lobby-ready').onclick = () => {
+          if (lobby.isHost) handlePacket({ type: 'toggle_ready', slot: lobby.mySlot });
+          else sendToHostOrAll({ type: 'toggle_ready', slot: lobby.mySlot });
+        };
+        document.getElementById('btn-lobby-swap').onclick = () => {
+          if (lobby.isHost) handlePacket({ type: 'swap_team', slot: lobby.mySlot });
+          else sendToHostOrAll({ type: 'swap_team', slot: lobby.mySlot });
+        };
+        document.getElementById('btn-lobby-start').onclick = () => {
+          if (!lobby.isHost) return;
+          const payload = { type: 'start_match', players: lobby.players, mode: selMode, arenaId: selArena };
+          broadcastFromHost(payload);
+          const me = lobby.players.find(p => p.slot === lobby.mySlot) || { team: 1, slot: 1 };
+          startMatch({ isHost: true, myTeam: me.team, mySlot: me.slot, players: lobby.players, mode: selMode, arenaId: selArena });
+        };
+        const sendChat = () => {
+          const inp = document.getElementById('lobby-chat-in');
+          const txt = inp.value.trim(); if (!txt) return; inp.value = '';
+          const me = lobby.players.find(p => p.slot === lobby.mySlot);
+          const nm = me ? me.name : myName;
+          if (lobby.isHost) handlePacket({ type: 'chat', name: nm, txt });
+          else sendToHostOrAll({ type: 'chat', name: nm, txt });
+        };
+        document.getElementById('btn-lobby-send').onclick = sendChat;
+        document.getElementById('lobby-chat-in').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } };
+      };
+
+      document.getElementById('btn-create-p2p').addEventListener('click', () => {
+        const code = 'FLK-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+        openFlickLobby(code, true);
+      });
+      document.getElementById('btn-join-p2p').addEventListener('click', () => {
+        const code = document.getElementById('input-join-p2p').value.trim().toUpperCase();
+        if (!code) return showToast('Enter a room code!', 'red');
+        openFlickLobby(code, false);
+      });
+      document.getElementById('btn-copy-room').addEventListener('click', () => {
+        if (lobby && navigator.clipboard) navigator.clipboard.writeText(lobby.code).catch(() => {});
+        showToast('Room code copied!', 'emerald');
+      });
+      document.getElementById('btn-leave-lobby').addEventListener('click', () => {
+        if (peer) { try { peer.destroy(); } catch (e) {} peer = null; hostConn = null; guestConns = []; }
+        switchView('menu');
+      });
+
+      // Arena HUD buttons
+      document.getElementById('btn-skip-prep').addEventListener('click', () => endPrepPhase());
+      document.getElementById('btn-arm-ult').addEventListener('click', () => {
+        if (selectedUltPuck && selectedUltPuck.ult >= 100) {
+          selectedUltPuck.ultArmed = !selectedUltPuck.ultArmed;
+          SFX.ult();
+          updateArenaHud();
+        }
+      });
+      document.getElementById('btn-quit-match').addEventListener('click', () => {
+        if (rafId) cancelAnimationFrame(rafId); match = null; switchView('menu');
+      });
+      document.getElementById('btn-res-rematch').addEventListener('click', () => startMatch(null));
+      document.getElementById('btn-res-menu').addEventListener('click', () => {
+        document.getElementById('modal-result').classList.add('hidden'); switchView('menu');
+      });
+
+      // Drag-and-Release Flick Controls on Canvas
+      const canvas = document.getElementById('arena-canvas');
+      canvas.addEventListener('pointerdown', ev => {
+        if (!match || match.phase === 'over' || match.shotInProgress) return;
+        const curTurnObj = (match.turnOrder && match.turnOrder[match.turnPlayerIdx]) || { slot: match.turn, team: match.turn };
+        const activeTeam = match.phase === 'prep' ? match.myTeam : (match.playType === 'local' ? match.turn : match.myTeam);
+        if (match.phase === 'battle' && match.playType === 'online' && curTurnObj.slot !== match.mySlot) return;
+        if (match.phase === 'battle' && match.playType === 'ai' && match.turn !== 1) return;
+        const pt = getCanvasCoords(ev);
+        // Find controllable Pokémon OR claimed Item puck!
+        const hit = match.pucks.find(p => p.alive && ((p.kind === 'mon' && p.team === activeTeam) || (p.kind === 'item' && p.ownerTeam === activeTeam)) && Math.hypot(p.x - pt.x, p.y - pt.y) <= p.r + 14);
+        if (hit) {
+          dragState = { puck: hit, startX: pt.x, startY: pt.y, curX: pt.x, curY: pt.y };
+          canvas.setPointerCapture(ev.pointerId);
+        }
+      });
+      canvas.addEventListener('pointermove', ev => {
+        if (!dragState) return;
+        const pt = getCanvasCoords(ev);
+        dragState.curX = pt.x; dragState.curY = pt.y;
+      });
+      canvas.addEventListener('pointerup', () => {
+        if (!dragState) return;
+        const p = dragState.puck;
+        const dx = p.x - dragState.curX, dy = p.y - dragState.curY;
+        const dist = Math.min(130, Math.hypot(dx, dy));
+        dragState = null;
+        if (dist > 14) {
+          const ang = Math.atan2(dy, dx);
+          const power = (dist / 130) * 19;
+          executeFlick(p, Math.cos(ang) * power, Math.sin(ang) * power);
+        }
+      });
+    }
+
+    window.addEventListener('load', () => {
+      loadFlickSave();
+      bindEvents();
+      switchView('menu');
+      lucide.createIcons();
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  })();
+  </script>
+</body>
+</html>

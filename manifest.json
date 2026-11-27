@@ -1,0 +1,25 @@
+{
+  "name": "Pok\u00e9Pit \u2014 Pok\u00e9mon Game Corner Slot Roguelike",
+  "short_name": "Pok\u00e9Pit",
+  "description": "CloverPit-inspired Pok\u00e9mon Game Corner Slot Machine Roguelike with all 1,025 Pok\u00e9mon, Shinies, Monochrome Type Magnets, 8 Pok\u00e9 Ball Catch Modes, Global Leaderboards, and Live PvP.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0b0d17",
+  "theme_color": "#0b0d17",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
